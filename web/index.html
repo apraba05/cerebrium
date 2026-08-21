@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Predictive Pre-Warm Agent</title>
+  <style>
+    :root{--bg:#07100d;--panel:#0b1713;--line:#1d382f;--text:#d7e4df;--muted:#77958a;--green:#58e6a7;--amber:#ffc766;--red:#ff7169;--cyan:#68d7ec;--ink:#020705}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text)}body{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;overflow-x:hidden;background-image:radial-gradient(circle at 70% -20%,#12382b 0,transparent 36%)}
+    button,input{font:inherit}.shell{width:min(1180px,100%);margin:auto;padding:28px 22px 48px}.top{display:flex;gap:20px;align-items:flex-start;justify-content:space-between;margin-bottom:22px}.eyebrow{color:var(--green);font-size:12px;letter-spacing:.16em;text-transform:uppercase}.brand h1{font-size:clamp(22px,4vw,34px);line-height:1.15;margin:8px 0}.brand p{max-width:700px;color:var(--muted);line-height:1.55;margin:0}.status{display:flex;align-items:center;gap:8px;color:var(--green);font-size:12px;white-space:nowrap;padding-top:4px}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}
+    .controls{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:13px;background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:14px}.btn{border:1px solid #2c7058;background:#123325;color:var(--green);border-radius:5px;padding:9px 14px;cursor:pointer}.btn:hover{background:#184733}.btn:disabled{opacity:.45;cursor:not-allowed}.btn.secondary{color:var(--text);border-color:var(--line);background:#101d19}.speed{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;margin-left:auto}.speed input{accent-color:var(--green);max-width:110px}
+    .terminal{background:var(--ink);border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 24px 80px #0007}.bar{height:38px;background:#101b17;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 13px;gap:7px}.traffic-light{width:10px;height:10px;border-radius:50%;background:#355148}.traffic-light:first-child{background:#e7645d}.traffic-light:nth-child(2){background:#d4a943}.traffic-light:nth-child(3){background:#4cb67a}.bar-title{font-size:11px;color:var(--muted);margin:auto;transform:translateX(-24px)}
+    .output{height:min(570px,67vh);min-height:420px;overflow:auto;padding:18px 20px;font-size:13px;line-height:1.55;scroll-behavior:smooth}.line{white-space:pre-wrap;overflow-wrap:anywhere;min-height:1.55em}.dim{color:var(--muted)}.green{color:var(--green)}.amber{color:var(--amber)}.red{color:var(--red)}.cyan{color:var(--cyan)}.strong{font-weight:700;color:#f0f7f4}.cursor:after{content:"▋";color:var(--green);animation:blink 1s step-end infinite}@keyframes blink{50%{opacity:0}}
+    .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.metric{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:14px;min-width:0}.metric small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px}.metric b{font-size:clamp(18px,3vw,27px);font-weight:500}.metric b.good{color:var(--green)}
+    .architecture{display:flex;align-items:center;justify-content:center;gap:9px;color:var(--muted);font-size:11px;margin:20px auto 0;flex-wrap:wrap}.architecture span{border:1px solid var(--line);background:var(--panel);padding:7px 9px;border-radius:4px}.architecture i{font-style:normal;color:var(--green)}
+    @media(max-width:650px){.shell{padding:18px 12px 32px}.top{display:block}.status{margin-top:15px}.speed{width:100%;margin-left:0}.output{padding:14px 12px;font-size:11px;min-height:390px}.metrics{grid-template-columns:repeat(2,1fr)}.bar-title{display:none}.controls .btn{flex:1}}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <header class="top">
+    <div class="brand"><div class="eyebrow">Cerebrium · control plane demo</div><h1>Predictive Pre-Warm Agent</h1><p>An agent reads a traffic forecast and pre-provisions GPU workers before demand arrives—avoiding model and CUDA cold starts.</p></div>
+    <div class="status"><span class="dot"></span> SIMULATION ONLINE</div>
+  </header>
+  <section class="controls" aria-label="Simulation controls">
+    <button class="btn" id="run">▶ Run full demo</button>
+    <button class="btn secondary" id="reset">↻ Reset</button>
+    <label class="speed">Playback speed <input id="speed" type="range" min="1" max="10" value="6"><span id="speedValue">6×</span></label>
+  </section>
+  <section class="terminal" aria-label="Demo terminal">
+    <div class="bar"><i class="traffic-light"></i><i class="traffic-light"></i><i class="traffic-light"></i><span class="bar-title">predictive-prewarm — simulation</span></div>
+    <div id="output" class="output" role="log" aria-live="polite"></div>
+  </section>
+  <section class="metrics" aria-label="Outcome metrics">
+    <div class="metric"><small>Reactive latency</small><b id="reactiveLatency">—</b></div>
+    <div class="metric"><small>Agent latency</small><b class="good" id="agentLatency">—</b></div>
+    <div class="metric"><small>Cold starts avoided</small><b class="good" id="avoided">—</b></div>
+    <div class="metric"><small>Warm hit rate</small><b class="good" id="warmRate">—</b></div>
+  </section>
+  <div class="architecture"><span>traffic.csv</span><i>→</i><span>LangChain agent</span><i>→ MCP</i><span>set_warm_pool_size</span><i>→</i><span>Redis desired state</span><i>→</i><span>scheduler</span></div>
+</main>
+<script>
+(() => {
+  'use strict';
+  const WARM_MS=100,COLD_MS=3000,REGION='us-east-1',NOW_MINUTE=24,HORIZON=5;
+  const TRAFFIC=[[0,2],[1,2],[2,3],[3,2],[4,2],[5,3],[6,2],[7,2],[8,3],[9,2],[10,2],[11,3],[12,2],[13,2],[14,3],[15,2],[16,3],[17,2],[18,3],[19,2],[20,3],[21,4],[22,3],[23,4],[24,5],[25,14],[26,18],[27,20],[28,19],[29,16]];
+  const redis=new Map(); let generation=0,running=false;
+  const $=id=>document.getElementById(id), output=$('output'),runButton=$('run');
+  const key=region=>`warm_pool:${region}`;
+  function getPool(region=REGION){return Number(redis.get(key(region))??0)}
+  function setPool(region,n){redis.set(key(region),Math.max(0,Math.trunc(Number(n))))}
+  function setWarmPoolSize(region,count){
+    if(Number(count)<0)return JSON.stringify({error:'count must be >= 0'});
+    region=String(region).trim()||REGION; setPool(region,count);
+    return JSON.stringify({ok:true,region,warm_pool_size:Math.trunc(Number(count)),redis_key:key(region)});
+  }
+  function forecastCount(rows){const values=rows.filter(([m])=>m>NOW_MINUTE&&m<=NOW_MINUTE+HORIZON).map(([,n])=>n);return values.length?Math.max(...values):1}
+  function runSimulation(mode,traffic,initialPool=1){
+    if(mode==='reactive')setPool(REGION,initialPool);
+    const result={mode,region:REGION,ticks:[],warm_hits:0,cold_hits:0,total_latency_ms:0};
+    for(const [minute,demand] of traffic){const pool=getPool(),warm=Math.min(demand,pool),cold=Math.max(0,demand-pool);if(mode==='reactive')setPool(REGION,Math.max(pool,demand));const tick={minute,requests:demand,pool_before:pool,warm_hits:warm,cold_hits:cold,pool_after:getPool()};result.ticks.push(tick);result.warm_hits+=warm;result.cold_hits+=cold;result.total_latency_ms+=warm*WARM_MS+cold*COLD_MS}
+    result.total_requests=result.warm_hits+result.cold_hits;result.warm_ratio=result.total_requests?result.warm_hits/result.total_requests:0;result.avg_latency_ms=result.total_requests?result.total_latency_ms/result.total_requests:0;return result
+  }
+  const escape=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  function line(text='',cls=''){const el=document.createElement('div');el.className=`line ${cls}`;el.innerHTML=escape(text);output.appendChild(el);output.scrollTop=output.scrollHeight}
+  const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms/Number($('speed').value)));
+  async function emit(text='',cls='',delay=160,token=generation){if(token!==generation)throw new Error('cancelled');line(text,cls);await sleep(delay);if(token!==generation)throw new Error('cancelled')}
+  async function printScheduler(result,token){
+    await emit(`========== scheduler (${result.mode}) ==========`, 'strong',200,token);await emit(`region=${result.region}  warm=${WARM_MS}ms  cold=${COLD_MS}ms`,'dim',100,token);await emit('min  demand  pool→  warm  cold  pool+','cyan',100,token);
+    for(const t of result.ticks){const mark=t.cold_hits&&t.minute>=25?' <<':'';const s=`${String(t.minute).padStart(3)}  ${String(t.requests).padStart(6)}  ${String(t.pool_before).padStart(5)}  ${String(t.warm_hits).padStart(4)}  ${String(t.cold_hits).padStart(4)}  ${String(t.pool_after).padStart(5)}${mark}`;await emit(s,mark?'red':'',85,token)}
+    await emit(`totals: requests=${result.total_requests}  warm=${result.warm_hits}  cold=${result.cold_hits}  warm_ratio=${Math.round(result.warm_ratio*100)}%  avg_latency=${Math.round(result.avg_latency_ms)}ms`,'strong',250,token);await emit('==============================================','dim',120,token)
+  }
+  async function runDemo(){
+    if(running)return;running=true;runButton.disabled=true;const token=++generation;output.innerHTML='';redis.clear();clearMetrics();
+    try{
+      await emit('==> Redis (cerebrium-warm-redis on :16380)','green',300,token);await emit('PONG','dim',250,token);await emit('','',80,token);await emit('################################################################','dim',50,token);await emit('# RUN 1 — reactive baseline (agent DISABLED)','strong',80,token);await emit('################################################################','dim',180,token);
+      const reactive=runSimulation('reactive',TRAFFIC,1);await printScheduler(reactive,token);await emit('','',100,token);await emit('################################################################','dim',50,token);await emit('# RUN 2 — agent ENABLED (forecast → MCP → Redis → scheduler)','strong',80,token);await emit('################################################################','dim',180,token);
+      redis.delete(key(REGION));setPool(REGION,1);await emit(`Redis warm_pool:${REGION} before agent: ${getPool()}`,'dim',180,token);await emit('llm: local heuristic stand-in (still calls MCP)','amber',260,token);await emit('','',50,token);await emit('=== agent reasoning + MCP tool call ===','strong',250,token);
+      const count=forecastCount(TRAFFIC);await emit(`[reasoning] Local stand-in reasoning: at T=${NOW_MINUTE}, the next ${HORIZON} minutes in the forecast CSV peak at ${count} concurrent requests. Setting warm pool to ${count} in ${REGION} so the spike is absorbed warm.`,'cyan',450,token);
+      const toolResult=setWarmPoolSize(REGION,count);await emit(`→ MCP set_warm_pool_size('${REGION}', ${count}) → ${toolResult}`,'green',350,token);await emit(`Redis warm_pool:${REGION} after agent:  ${getPool()}`,'green',200,token);
+      const prewarmed=runSimulation('prewarmed',TRAFFIC);await printScheduler(prewarmed,token);await emit('','',80,token);await emit('################################################################','dim',50,token);await emit('# SIDE-BY-SIDE (causal link: reasoning → warm/cold ratio)','strong',80,token);await emit('################################################################','dim',150,token);await emit(`${'metric'.padEnd(22)} ${'reactive'.padStart(12)} ${'agent+MCP'.padStart(12)}`,'cyan',80,token);await emit('-'.repeat(48),'dim',60,token);await emit(`${'warm hits'.padEnd(22)} ${String(reactive.warm_hits).padStart(12)} ${String(prewarmed.warm_hits).padStart(12)}`,'',80,token);await emit(`${'cold starts'.padEnd(22)} ${String(reactive.cold_hits).padStart(12)} ${String(prewarmed.cold_hits).padStart(12)}`,'',80,token);await emit(`${'warm ratio'.padEnd(22)} ${(Math.round(reactive.warm_ratio*100)+'%').padStart(12)} ${(Math.round(prewarmed.warm_ratio*100)+'%').padStart(12)}`,'',80,token);await emit(`${'avg latency (ms)'.padEnd(22)} ${String(Math.round(reactive.avg_latency_ms)).padStart(12)} ${String(Math.round(prewarmed.avg_latency_ms)).padStart(12)}`,'',80,token);await emit('-'.repeat(48),'dim',60,token);await emit(`avg latency improvement with agent pre-warm: ${Math.round(reactive.avg_latency_ms-prewarmed.avg_latency_ms)} ms/request`,'green',100,token);
+      $('reactiveLatency').textContent=`${Math.round(reactive.avg_latency_ms)} ms`;$('agentLatency').textContent=`${Math.round(prewarmed.avg_latency_ms)} ms`;$('avoided').textContent=reactive.cold_hits-prewarmed.cold_hits;$('warmRate').textContent=`${Math.round(prewarmed.warm_ratio*100)}%`;
+    }catch(e){if(e.message!=='cancelled')line(`simulation error: ${e.message}`,'red')}finally{if(token===generation){running=false;runButton.disabled=false}}
+  }
+  function clearMetrics(){for(const id of ['reactiveLatency','agentLatency','avoided','warmRate'])$(id).textContent='—'}
+  function reset(){generation++;running=false;redis.clear();runButton.disabled=false;output.innerHTML='';clearMetrics();line('$ ./run.sh','green');line('Ready. Run the complete reactive vs. predictive pre-warm simulation.','dim');line('','cursor')}
+  runButton.addEventListener('click',runDemo);$('reset').addEventListener('click',reset);$('speed').addEventListener('input',e=>$('speedValue').textContent=`${e.target.value}×`);reset();
+  window.PreWarmSimulation=Object.freeze({runSimulation,forecastCount,setWarmPoolSize,traffic:TRAFFIC.map(x=>[...x])});
+})();
+</script>
+</body>
+</html>
